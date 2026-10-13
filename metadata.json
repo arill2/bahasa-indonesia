@@ -1,0 +1,6 @@
+{
+  "name": "BAHASA XII — SMAN 1 PINRANG",
+  "description": "Platform interaktif pembelajaran Bahasa Indonesia Kelas XII, latihan adaptif, dan simulasi TKA untuk siswa dan guru SMAN 1 Pinrang.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
