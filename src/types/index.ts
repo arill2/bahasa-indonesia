@@ -17,6 +17,15 @@ export const CLASS_OPTIONS = [
 
 export type SchoolClass = typeof CLASS_OPTIONS[number];
 
+// Kelas yang dipakai pada halaman login siswa.
+export const LOGIN_CLASS_OPTIONS = ['XII D', 'XII E', 'XII F', 'XII G', 'XII H', 'XII I'] as const;
+
+export interface AuthSession {
+  role: UserRole;
+  studentName?: string;
+  className?: string;
+}
+
 export type Competency =
   | 'ide-pokok'             // Menentukan Ide Pokok & Gagasan Utama
   | 'tersurat-tersirat'     // Informasi Tersurat & Tersirat
@@ -186,7 +195,6 @@ export interface TeacherConfig {
   teacherName: string;
   nip: string;
   academicYear: string;
-  defaultTimePerQuestionSeconds: number;
   schoolName: string;
   passGrade: number;
 }

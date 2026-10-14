@@ -64,12 +64,12 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Category Filter Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-stone-200">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-stone-900 tracking-tight">
             Modul Pembelajaran Bahasa Indonesia Kelas XII
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-stone-500">
             Materi esensial penalaran wacana, struktur kebahasaan, dan telaah kritis sesuai karakteristik TKA.
           </p>
         </div>
@@ -82,8 +82,8 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
               onClick={() => setSelectedCategory(cat)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === cat
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-100'
               }`}
             >
               {cat}
@@ -96,38 +96,39 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Module Sidebar List */}
         <div className="lg:col-span-4 space-y-2.5">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block px-1">
+          <span className="text-xs font-bold text-stone-500 block px-1">
             Daftar Modul ({filteredModules.length})
           </span>
           {filteredModules.map((mod) => {
             const active = mod.id === selectedModuleId;
             const completed = profile.completedModuleIds.includes(mod.id);
             return (
-              <div
+              <button
                 key={mod.id}
+                type="button"
                 onClick={() => {
                   setSelectedModuleId(mod.id);
                   setQuizAnswers({});
                   setQuizSubmitted(false);
                 }}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`w-full p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                   active
-                    ? 'bg-indigo-50/80 border-indigo-400 shadow-xs ring-1 ring-indigo-300'
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'bg-teal-50/80 border-teal-400 shadow-xs ring-1 ring-teal-300'
+                    : 'bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50'
                 }`}
               >
-                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                  <span className="text-indigo-600 font-bold uppercase">{mod.category}</span>
+                <div className="flex items-center justify-between text-[11px] font-semibold text-stone-500 mb-1">
+                  <span className="text-teal-600 font-bold">{mod.category}</span>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3 h-3" />
                     <span>{mod.estimatedMinutes} m</span>
                   </div>
                 </div>
-                <h4 className={`text-sm font-bold ${active ? 'text-indigo-900' : 'text-slate-800'}`}>
+                <h4 className={`text-sm font-bold ${active ? 'text-teal-900' : 'text-stone-900'}`}>
                   {mod.title}
                 </h4>
                 <div className="mt-2 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 text-[11px] truncate max-w-[180px]">
+                  <span className="text-stone-500 text-[11px] truncate max-w-[180px]">
                     {mod.subtitle}
                   </span>
                   {completed ? (
@@ -135,23 +136,23 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
                       <Check className="w-3 h-3" /> Selesai
                     </span>
                   ) : (
-                    <span className="text-[11px] text-slate-400 font-medium">Belum selesai</span>
+                    <span className="text-[11px] text-stone-500 font-medium">Belum selesai</span>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
 
         {/* Active Module Reader */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-8">
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-stone-200 p-6 sm:p-8 shadow-xs space-y-8">
           {/* Module Title & Meta */}
           <div>
             <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md">
+              <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md">
                 {currentModule.category}
               </span>
-              <div className="flex items-center gap-3 text-xs text-slate-500">
+              <div className="flex items-center gap-3 text-xs text-stone-500">
                 <span className="flex items-center gap-1 font-medium">
                   <Clock className="w-3.5 h-3.5" />
                   Estimasi: {currentModule.estimatedMinutes} Menit
@@ -164,24 +165,24 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
               </div>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-stone-900 tracking-tight">
               {currentModule.title}
             </h1>
-            <p className="text-sm text-slate-600 mt-1 font-medium leading-relaxed">
+            <p className="text-sm text-stone-600 mt-1 font-medium leading-relaxed">
               {currentModule.subtitle}
             </p>
           </div>
 
           {/* Objectives */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-2">
-              <Target className="w-4 h-4 text-indigo-600" />
+          <div className="p-4 rounded-xl bg-stone-50 border border-stone-200">
+            <h3 className="text-xs font-bold text-stone-900 flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-teal-600" />
               Tujuan Pembelajaran
             </h3>
-            <ul className="text-xs text-slate-600 space-y-1.5">
+            <ul className="text-xs text-stone-600 space-y-1.5">
               {currentModule.objectives.map((obj, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 shrink-0" />
                   <span>{obj}</span>
                 </li>
               ))}
@@ -192,22 +193,22 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
           <div className="space-y-6">
             {currentModule.contentSections.map((sec, idx) => (
               <div key={idx} className="space-y-3">
-                <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-1.5">
+                <h3 className="text-base font-bold text-stone-900 border-b border-stone-100 pb-1.5">
                   {sec.heading}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                <p className="text-xs sm:text-sm text-stone-700 leading-relaxed">
                   {sec.body}
                 </p>
 
                 {sec.keyPoints && (
-                  <div className="p-3.5 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800 block">
+                  <div className="p-3.5 bg-teal-50/50 rounded-xl border border-teal-100 space-y-1.5">
+                    <span className="text-[11px] font-bold text-teal-800 block">
                       Poin Kunci Asesmen:
                     </span>
-                    <ul className="text-xs text-slate-700 space-y-1">
+                    <ul className="text-xs text-stone-700 space-y-1">
                       {sec.keyPoints.map((kp, kIdx) => (
                         <li key={kIdx} className="flex items-start gap-2">
-                          <span className="text-indigo-600 font-bold">•</span>
+                          <span className="text-teal-600 font-bold">•</span>
                           <span>{kp}</span>
                         </li>
                       ))}
@@ -221,11 +222,11 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
                       <FileText className="w-4 h-4 text-amber-600" />
                       <span>{sec.example.title}</span>
                     </div>
-                    <blockquote className="text-xs italic text-slate-800 bg-white/80 p-3 rounded-lg border border-amber-100 leading-relaxed font-serif-reading">
+                    <blockquote className="text-xs italic text-stone-900 bg-white/80 p-3 rounded-lg border border-amber-100 leading-relaxed font-serif-reading">
                       "{sec.example.text}"
                     </blockquote>
-                    <div className="text-xs text-slate-700 pt-1">
-                      <span className="font-semibold text-slate-900">Analisis Kritis: </span>
+                    <div className="text-xs text-stone-700 pt-1">
+                      <span className="font-semibold text-stone-900">Analisis Kritis: </span>
                       {sec.example.analysis}
                     </div>
                   </div>
@@ -236,7 +237,7 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
 
           {/* Summary Box */}
           <div className="p-4.5 rounded-xl bg-emerald-50/60 border border-emerald-200">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5 mb-2">
+            <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5 mb-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               Ringkasan Materi
             </h4>
@@ -251,15 +252,12 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
           </div>
 
           {/* Interactive "Cek Pemahaman" */}
-          <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-4 border border-slate-800">
+          <div className="p-5 rounded-2xl bg-stone-900 text-white space-y-4 border border-stone-900">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-indigo-400" />
+                <HelpCircle className="w-5 h-5 text-teal-400" />
                 <h4 className="font-bold text-sm sm:text-base">Cek Pemahaman Anda</h4>
               </div>
-              <span className="text-[11px] text-slate-300 font-semibold bg-slate-800 border border-slate-700 px-2.5 py-0.5 rounded-full">
-                Uji Pemahaman Kilat
-              </span>
             </div>
 
             {currentModule.checkUnderstanding.map((cu, qIdx) => {
@@ -267,13 +265,13 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
               const isCorrect = selectedOpt === cu.correctIndex;
               return (
                 <div key={qIdx} className="space-y-3 pt-2">
-                  <p className="text-xs sm:text-sm text-slate-100 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-stone-100 leading-relaxed">
                     {cu.question}
                   </p>
                   <div className="space-y-2">
                     {cu.options.map((opt, oIdx) => {
                       const isChosen = selectedOpt === oIdx;
-                      let btnStyle = 'bg-white/10 hover:bg-white/15 text-slate-100 border-white/15';
+                      let btnStyle = 'bg-white/10 hover:bg-white/15 text-stone-100 border-white/15';
 
                       if (quizSubmitted) {
                         if (oIdx === cu.correctIndex) {
@@ -281,10 +279,10 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
                         } else if (isChosen && !isCorrect) {
                           btnStyle = 'bg-rose-600 text-white border-rose-500 line-through';
                         } else {
-                          btnStyle = 'opacity-40 bg-white/5 text-slate-300 border-transparent';
+                          btnStyle = 'opacity-40 bg-white/5 text-stone-300 border-transparent';
                         }
                       } else if (isChosen) {
-                        btnStyle = 'bg-indigo-600 text-white border-indigo-500 font-semibold';
+                        btnStyle = 'bg-teal-600 text-white border-teal-500 font-semibold';
                       }
 
                       return (
@@ -323,7 +321,7 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
                           </>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-200">{cu.explanation}</p>
+                      <p className="text-[11px] text-stone-200">{cu.explanation}</p>
                     </div>
                   )}
                 </div>
@@ -334,7 +332,7 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
               <button
                 onClick={handleCheckQuiz}
                 disabled={Object.keys(quizAnswers).length === 0}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-xs cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-xs cursor-pointer"
               >
                 Periksa Jawaban
               </button>
@@ -352,14 +350,14 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
           </div>
 
           {/* Action Footer */}
-          <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="pt-4 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-4">
             <button
               onClick={handleMarkCompleted}
               disabled={isCompleted}
               className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                 isCompleted
                   ? 'bg-emerald-100 text-emerald-800 cursor-default'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md cursor-pointer'
+                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-md cursor-pointer'
               }`}
             >
               <Check className="w-4 h-4" />
@@ -368,11 +366,10 @@ export const ModulesView: React.FC<ModulesViewProps> = ({
 
             <button
               onClick={() => onStartPracticeByCompetency(currentModule.relatedCompetencies)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-100 hover:bg-teal-50 hover:text-teal-700 text-stone-700 text-xs font-bold transition-all cursor-pointer"
             >
-              <Target className="w-4 h-4 text-indigo-600" />
+              <Target className="w-4 h-4 text-teal-600" />
               Latihan Soal Terkait Modul Ini
-              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>

@@ -3,37 +3,49 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { UserRole, Question, StudentProfile, ExamSession } from './types';
+import React, { useState } from 'react';
+import { UserRole, Question, StudentProfile, ExamSession, AuthSession } from './types';
 import {
   getStoredProfile,
   saveStoredProfile,
   getStoredQuestions,
-  recordStudentActivity
+  recordStudentActivity,
+  getAuthSession,
+  saveAuthSession,
+  clearAuthSession
 } from './services/storage';
 
+import { LoginView } from './views/LoginView';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 import { Footer } from './components/Footer';
 
-import { Dashboard } from './components/Dashboard';
-import { ModulesView } from './components/ModulesView';
-import { PracticeView } from './components/PracticeView';
-import { QuestionBankView } from './components/QuestionBankView';
-import { SimulationView } from './components/SimulationView';
-import { SimulationResultView } from './components/SimulationResultView';
-import { AdaptivePracticeView } from './components/AdaptivePracticeView';
-import { MistakesView } from './components/MistakesView';
-import { TipsView } from './components/TipsView';
-import { TeacherDashboard } from './components/TeacherDashboard';
-import { ProfileView } from './components/ProfileView';
-import { StudentActivityTrackerView } from './components/StudentActivityTrackerView';
-import { AITutorModal } from './components/AITutorModal';
+import { Dashboard } from './views/Dashboard';
+import { ModulesView } from './views/ModulesView';
+import { PracticeView } from './views/PracticeView';
+import { QuestionBankView } from './views/QuestionBankView';
+import { SimulationView } from './views/SimulationView';
+import { SimulationResultView } from './views/SimulationResultView';
+import { AdaptivePracticeView } from './views/AdaptivePracticeView';
+import { MistakesView } from './views/MistakesView';
+import { TipsView } from './views/TipsView';
+import { TeacherDashboard } from './views/TeacherDashboard';
+import { ProfileView } from './views/ProfileView';
+import { StudentActivityTrackerView } from './views/StudentActivityTrackerView';
 import { QuestionDetailModal } from './components/QuestionDetailModal';
+import {
+  recordStudentLogin,
+  submitResultRequest,
+  adminLoginRequest,
+  setAdminToken
+} from './services/remote';
 
 export default function App() {
-  const [role, setRole] = useState<UserRole>('student');
-  const [activeTab, setActiveTab] = useState<string>('beranda');
+  const [session, setSession] = useState<AuthSession | null>(getAuthSession());
+  const role: UserRole = session?.role ?? 'student';
+  const [activeTab, setActiveTab] = useState<string>(
+    session?.role === 'teacher' ? 'guru-dashboard' : 'beranda'
+  );
   const [profile, setProfile] = useState<StudentProfile>(getStoredProfile());
   const [questions, setQuestions] = useState<Question[]>(getStoredQuestions());
 
@@ -42,12 +54,12 @@ export default function App() {
     profile.examHistory.length > 0 ? profile.examHistory[0] : null
   );
   const [adaptiveTargetComp, setAdaptiveTargetComp] = useState<string | undefined>(undefined);
+  const [adaptiveQuestionIds, setAdaptiveQuestionIds] = useState<string[] | undefined>(undefined);
   const [practiceCompFilter, setPracticeCompFilter] = useState<string | null>(null);
+  const [practiceQuestionIds, setPracticeQuestionIds] = useState<string[] | null>(null);
   const [initialModuleId, setInitialModuleId] = useState<string | undefined>(undefined);
 
   // Modals & Drawers
-  const [isAITutorOpen, setIsAITutorOpen] = useState(false);
-  const [aiTutorContext, setAiTutorContext] = useState<{ question?: string; stimulus?: string }>({});
   const [detailQuestion, setDetailQuestion] = useState<Question | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -61,59 +73,130 @@ export default function App() {
     setQuestions(getStoredQuestions());
   };
 
-  // Open AI Tutor with specific context
-  const handleOpenAITutorWithContext = (question: string, stimulus: string) => {
-    setAiTutorContext({ question, stimulus });
-    setIsAITutorOpen(true);
+  // Student login: name + class start a fresh local progress record.
+  const handleStudentLogin = (name: string, className: string) => {
+    const current = getStoredProfile();
+    const fresh: StudentProfile = {
+      ...current,
+      name,
+      className,
+      nis: '',
+      nisn: '',
+      xp: 0,
+      level: 1,
+      streakDays: 0,
+      completedModuleIds: [],
+      examHistory: [],
+      practiceHistory: [],
+      badges: current.badges.map((b) => ({ ...b, unlocked: false, dateUnlocked: undefined }))
+    };
+    saveStoredProfile(fresh);
+    setProfile(fresh);
+    setActiveExamSession(null);
+
+    recordStudentActivity({
+      studentName: name,
+      nis: '',
+      className,
+      activityType: 'login',
+      description: `Login siswa (${className})`
+    });
+
+    recordStudentLogin(name, className);
+
+    const next: AuthSession = { role: 'student', studentName: name, className };
+    saveAuthSession(next);
+    setSession(next);
+    setActiveTab('beranda');
+  };
+
+  // Admin login: verified by the server against env credentials. Returns token for admin API.
+  // Admin token died (TTL or revoked): drop the local session and force re-login.
+  const handleAdminExpired = () => {
+    clearAuthSession();
+    setSession(null);
+  };
+
+  const handleAdminLogin = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const token = await adminLoginRequest(username, password);
+      if (!token) return false;
+
+      const next: AuthSession = { role: 'teacher' };
+      saveAuthSession(next);
+      setSession(next);
+      setActiveTab('guru-dashboard');
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleLogout = () => {
+    clearAuthSession();
+    setAdminToken(null);
+    setSession(null);
+    setActiveTab('beranda');
+    setMobileMenuOpen(false);
   };
 
   // Navigation handlers
   const handleNavigate = (tab: string, extraState?: any) => {
-    if (tab === 'materi' && extraState?.moduleId) {
-      setInitialModuleId(extraState.moduleId);
+    if (tab === 'materi') {
+      setInitialModuleId(extraState?.moduleId);
     }
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleStartAdaptive = (competency?: string) => {
+  const handleStartAdaptive = (competency?: string, questionIds?: string[]) => {
     setAdaptiveTargetComp(competency);
+    setAdaptiveQuestionIds(questionIds);
     setActiveTab('adaptif');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleStartPracticeByCompetencies = (comps: string[]) => {
     setPracticeCompFilter(comps.length > 0 ? comps[0] : null);
+    setPracticeQuestionIds(null);
     setActiveTab('latihan');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleStartPracticeWithQuestions = (selectedQuestions: Question[]) => {
-    if (selectedQuestions.length > 0) {
-      setPracticeCompFilter(selectedQuestions[0].competency);
-    }
+    setPracticeCompFilter(null);
+    setPracticeQuestionIds(selectedQuestions.map((q) => q.id));
     setActiveTab('latihan');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleViewSimulationResults = (session: ExamSession) => {
-    setActiveExamSession(session);
+  const handleViewSimulationResults = (sessionData: ExamSession) => {
+    setActiveExamSession(sessionData);
     recordStudentActivity({
       studentName: profile.name,
-      nis: profile.nis || '19283',
+      nis: profile.nis || '',
       className: profile.className,
       activityType: 'simulasi',
-      description: `Menyelesaikan ${session.title}`,
-      score: session.score,
-      correctCount: session.correctCount,
-      totalQuestions: session.totalQuestions
+      description: `Menyelesaikan ${sessionData.title}`,
+      score: sessionData.score,
+      correctCount: sessionData.correctCount,
+      totalQuestions: sessionData.totalQuestions
+    });
+    submitResultRequest({
+      name: profile.name,
+      className: profile.className,
+      activityType: sessionData.mode === 'adaptif' ? 'adaptif' : 'simulasi',
+      title: sessionData.title,
+      score: sessionData.score,
+      correctCount: sessionData.correctCount,
+      totalQuestions: sessionData.totalQuestions
     });
     setActiveTab('hasil');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleResetData = () => {
-    if (confirm('Apakah Anda ingin mereset data belajar demo ke setelan awal?')) {
+    if (confirm('Apakah Anda ingin mereset data belajar di perangkat ini ke setelan awal?')) {
       localStorage.clear();
       window.location.reload();
     }
@@ -122,24 +205,18 @@ export default function App() {
   // Count wrong practice items
   const wrongCount = profile.practiceHistory.filter((p) => !p.isCorrect).length;
 
+  // Gate the app behind the login screen.
+  if (!session) {
+    return <LoginView onStudentLogin={handleStudentLogin} onAdminLogin={handleAdminLogin} />;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 overflow-x-hidden max-w-full w-full">
+    <div className="min-h-screen flex flex-col bg-stone-50 text-stone-900 overflow-x-hidden max-w-full w-full">
       {/* Top Header */}
       <Header
         role={role}
-        onRoleChange={(newRole) => {
-          setRole(newRole);
-          if (newRole === 'teacher') {
-            setActiveTab('guru-dashboard');
-          } else if (activeTab === 'guru-dashboard') {
-            setActiveTab('beranda');
-          }
-        }}
         profile={profile}
-        onOpenAITutor={() => {
-          setAiTutorContext({});
-          setIsAITutorOpen(true);
-        }}
+        onLogout={handleLogout}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         activeTab={activeTab}
@@ -189,7 +266,7 @@ export default function App() {
             profile={profile}
             onUpdateProfile={handleUpdateProfile}
             filterCompetency={practiceCompFilter}
-            onOpenAITutorWithContext={handleOpenAITutorWithContext}
+            restrictedQuestionIds={practiceQuestionIds}
           />
         )}
 
@@ -224,17 +301,16 @@ export default function App() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               onStartAdaptiveForCompetency={(comp) => handleStartAdaptive(comp)}
-              onOpenAITutorWithContext={handleOpenAITutorWithContext}
             />
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
-              <h3 className="text-lg font-bold text-slate-800">Belum Ada Sesi Ujian</h3>
-              <p className="text-xs text-slate-500">
+            <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center space-y-4">
+              <h3 className="text-lg font-bold text-stone-900">Belum Ada Sesi Ujian</h3>
+              <p className="text-xs text-stone-500">
                 Silakan ikuti salah satu mode simulasi untuk melihat analisis kemampuan dan grafik pencapaian nilai Anda.
               </p>
               <button
                 onClick={() => setActiveTab('simulasi')}
-                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold"
+                className="px-5 py-2.5 bg-teal-700 text-white rounded-xl text-xs font-bold"
               >
                 Mulai Simulasi TKA
               </button>
@@ -246,7 +322,7 @@ export default function App() {
         {activeTab === 'data-siswa' && (
           <StudentActivityTrackerView
             currentProfile={profile}
-            onNavigateTab={handleNavigate}
+            onAdminExpired={handleAdminExpired}
           />
         )}
 
@@ -258,7 +334,7 @@ export default function App() {
           <MistakesView
             profile={profile}
             allQuestions={questions}
-            onStartAdaptive={(comp) => handleStartAdaptive(comp)}
+            onStartAdaptive={(comp, ids) => handleStartAdaptive(comp, ids)}
             onNavigateToModule={() => handleNavigate('materi')}
           />
         )}
@@ -266,6 +342,7 @@ export default function App() {
         {/* LATIHAN ADAPTIF */}
         {activeTab === 'adaptif' && (
           <AdaptivePracticeView
+            restrictedQuestionIds={adaptiveQuestionIds}
             targetCompetency={adaptiveTargetComp}
             allQuestions={questions}
             profile={profile}
@@ -274,11 +351,12 @@ export default function App() {
           />
         )}
 
-        {/* DASHBOARD GURU */}
+        {/* DASHBOARD ADMIN */}
         {activeTab === 'guru-dashboard' && (
           <TeacherDashboard
             questions={questions}
             onRefreshQuestions={handleRefreshQuestions}
+            onAdminExpired={handleAdminExpired}
           />
         )}
 
@@ -295,19 +373,10 @@ export default function App() {
       {/* Footer */}
       <Footer />
 
-      {/* AI Tutor Modal */}
-      <AITutorModal
-        isOpen={isAITutorOpen}
-        onClose={() => setIsAITutorOpen(false)}
-        contextQuestion={aiTutorContext.question}
-        contextStimulus={aiTutorContext.stimulus}
-      />
-
       {/* Question Detail Modal from Bank Soal */}
       <QuestionDetailModal
         question={detailQuestion}
         onClose={() => setDetailQuestion(null)}
-        onOpenAITutorWithContext={handleOpenAITutorWithContext}
       />
     </div>
   );

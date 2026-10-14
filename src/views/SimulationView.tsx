@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Timer,
   Clock,
@@ -7,23 +7,17 @@ import {
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
-  HelpCircle,
   Play,
-  RotateCcw,
-  Layers,
-  ArrowRight,
   Volume2,
   VolumeX,
-  Type,
   Highlighter,
-  Maximize2,
   Grid,
   X,
   Keyboard
 } from 'lucide-react';
 import { Question, ExamSession, Competency, COMPETENCY_LABELS, StudentProfile } from '../types';
 import { recordExamSession } from '../services/storage';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface SimulationViewProps {
   allQuestions: Question[];
@@ -33,6 +27,7 @@ interface SimulationViewProps {
 }
 
 export const SimulationView: React.FC<SimulationViewProps> = ({
+
   allQuestions,
   profile,
   onUpdateProfile,
@@ -50,6 +45,8 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
   const [startTime, setStartTime] = useState<number>(0);
   const [showConfirmFinishModal, setShowConfirmFinishModal] = useState<boolean>(false);
   const [showMobilePalette, setShowMobilePalette] = useState<boolean>(false);
+  const confirmTrapRef = useFocusTrap<HTMLDivElement>(showConfirmFinishModal);
+  const paletteTrapRef = useFocusTrap<HTMLDivElement>(showMobilePalette);
 
   // Reading tools state
   const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('md');
@@ -88,18 +85,18 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
     if (!isTestActive) return;
 
     const timer = setInterval(() => {
-      setTimeLeftSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleFinishSimulation(true); // Auto-submit when time up
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeLeftSeconds((prev) => (prev <= 0 ? 0 : prev - 1));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isTestActive, answers, flagged]);
+  }, [isTestActive]);
+
+  // Auto-submit once when the time runs out.
+  useEffect(() => {
+    if (isTestActive && timeLeftSeconds === 0) {
+      handleFinishSimulation(true);
+    }
+  }, [timeLeftSeconds, isTestActive]);
 
   // Keyboard shortcut listener for active exam
   useEffect(() => {
@@ -110,7 +107,8 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
       const key = e.key.toUpperCase();
-      if (['A', 'B', 'C', 'D', 'E'].includes(key)) {
+      const activeQ = currentQuestions[currentIndex];
+      if (activeQ && activeQ.options.some((o) => o.id === key)) {
         handleSelectOption(key);
       } else if (key === 'F') {
         handleToggleFlag();
@@ -156,10 +154,20 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
     setMultitextTab('semua');
   }, [currentIndex, isTestActive]);
 
+  // Leaving the exam view also silences any ongoing narration.
+  useEffect(() => () => window.speechSynthesis?.cancel(), []);
+
   const handleStartExam = (selectedMode: 'cepat' | 'reguler' | 'intensif') => {
+    if (allQuestions.length === 0) return;
+    finishedRef.current = false;
     const config = modeConfigs[selectedMode];
     // Shuffle or select subset
-    const shuffled = [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, config.count);
+    const pool = [...allQuestions];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const shuffled = pool.slice(0, config.count);
 
     setExamMode(selectedMode);
     setCurrentQuestions(shuffled);
@@ -237,7 +245,11 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
     }
   };
 
+  const finishedRef = useRef(false);
+
   const handleFinishSimulation = (isAuto = false) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -299,7 +311,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
       }
     });
 
-    const score = Math.round((correctCount / currentQuestions.length) * 100);
+    const score = currentQuestions.length > 0 ? Math.round((correctCount / currentQuestions.length) * 100) : 0;
 
     const session: ExamSession = {
       id: `sim-${Date.now()}`,
@@ -338,15 +350,14 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
       <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
         {/* Title */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            SIMULASI RESMI • BANK SOAL 45+ BUTIR LENGKAP
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold tracking-wide">
+            Bank Soal Lengkap • Mode Simulasi Berbatas Waktu
           </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">
             Simulasi TKA Bahasa Indonesia Kelas XII
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-            Peserta: <strong className="text-indigo-700 font-bold">{profile.name}</strong> ({profile.className} • SMAN 1 Pinrang). Asah kesiapan dan ketahanan berpikir Anda dengan durasi waktu resmi, wacana otentik berbobot HOTS, dan analisis kelemahan mendalam.
+          <p className="text-xs sm:text-sm text-stone-600 max-w-xl mx-auto leading-relaxed">
+            Peserta: <strong className="text-teal-700 font-bold">{profile.name}</strong> ({profile.className} • SMAN 1 Pinrang). Asah kesiapan dan ketahanan berpikir Anda dengan durasi waktu resmi, wacana otentik berbobot HOTS, dan analisis kelemahan mendalam.
           </p>
         </div>
 
@@ -358,11 +369,20 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
             return (
               <div
                 key={mKey}
+                role="button"
+                tabIndex={0}
                 onClick={() => setExamMode(mKey)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setExamMode(mKey);
+                  }
+                }}
+                aria-pressed={isSelected}
                 className={`p-6 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                   isSelected
-                    ? 'bg-indigo-50/50 border-indigo-600 shadow-xs ring-1 ring-indigo-500'
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'bg-teal-50/50 border-teal-600 shadow-xs ring-1 ring-teal-500'
+                    : 'bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50'
                 }`}
               >
                 <div>
@@ -370,27 +390,27 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                     <span
                       className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                         isSelected
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-slate-100 text-slate-600'
+                          ? 'bg-teal-600 text-white'
+                          : 'bg-stone-100 text-stone-600'
                       }`}
                     >
                       {cfg.badge}
                     </span>
-                    <Clock className={`w-4 h-4 ${isSelected ? 'text-indigo-600' : 'text-slate-400'}`} />
+                    <Clock className={`w-4 h-4 ${isSelected ? 'text-teal-600' : 'text-stone-500'}`} />
                   </div>
 
-                  <h3 className="font-extrabold text-slate-900 text-lg mb-1">{cfg.label}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed mb-4">{cfg.desc}</p>
+                  <h3 className="font-extrabold text-stone-900 text-lg mb-1">{cfg.label}</h3>
+                  <p className="text-xs text-stone-500 leading-relaxed mb-4">{cfg.desc}</p>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 space-y-2 text-xs">
+                <div className="pt-3 border-t border-stone-100 space-y-2 text-xs">
                   <div className="flex items-center justify-between font-semibold">
-                    <span className="text-slate-500">Jumlah Soal:</span>
-                    <span className="text-indigo-700 font-bold">{cfg.count} Soal</span>
+                    <span className="text-stone-500">Jumlah Soal:</span>
+                    <span className="text-teal-700 font-bold">{cfg.count} Soal</span>
                   </div>
                   <div className="flex items-center justify-between font-semibold">
-                    <span className="text-slate-500">Alokasi Waktu:</span>
-                    <span className="text-indigo-700 font-bold">{cfg.minutes} Menit</span>
+                    <span className="text-stone-500">Alokasi Waktu:</span>
+                    <span className="text-teal-700 font-bold">{cfg.minutes} Menit</span>
                   </div>
                 </div>
               </div>
@@ -399,26 +419,26 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
         </div>
 
         {/* Instructions & Features */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+        <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-2xs space-y-4">
+          <h3 className="text-xs font-bold text-stone-900 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            Fitur Unggulan Simulasi Digital CBT
+            Fitur Simulasi CBT
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-600">
-            <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-              <span className="font-bold text-slate-800 block">⚡ Pintasan Keyboard:</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-stone-600">
+            <div className="p-3 bg-stone-50 rounded-xl space-y-1">
+              <span className="font-bold text-stone-900 block">Pintasan Keyboard:</span>
               <p>Gunakan tombol A, B, C, D, E untuk memilih jawaban, tombol F untuk menandai ragu-ragu, dan tombol Panah Kiri/Kanan untuk berpindah soal.</p>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-              <span className="font-bold text-slate-800 block">🖍️ Stabilo Digital & Ukuran Teks:</span>
-              <p>Anda dapat memperbesar huruf wacana (A / A+) dan mengaktifkan stabilo kuning untuk menandai paragraf penting wacana.</p>
+            <div className="p-3 bg-stone-50 rounded-xl space-y-1">
+              <span className="font-bold text-stone-900 block">Stabilo Digital & Ukuran Teks:</span>
+              <p>Anda dapat memperbesar huruf wacana (A / A+) dan mengaktifkan stabilo untuk menandai paragraf penting wacana.</p>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-              <span className="font-bold text-slate-800 block">⏱️ Timer & Auto-Submit:</span>
+            <div className="p-3 bg-stone-50 rounded-xl space-y-1">
+              <span className="font-bold text-stone-900 block">Timer & Auto-Submit:</span>
               <p>Waktu berjalan otomatis. Jika waktu habis, jawaban tersimpan dan skor langsung dikalkulasi.</p>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-              <span className="font-bold text-slate-800 block">📊 Analisis Diagnosis:</span>
+            <div className="p-3 bg-stone-50 rounded-xl space-y-1">
+              <span className="font-bold text-stone-900 block">Analisis Diagnosis:</span>
               <p>Hasil ujian membedah capaian 9 kompetensi dan memberikan rekomendasi latihan kelemahan.</p>
             </div>
           </div>
@@ -428,12 +448,12 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
         <div className="text-center pt-2">
           <button
             onClick={() => handleStartExam(examMode)}
-            className="inline-flex items-center gap-2.5 px-9 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-base shadow-xl hover:shadow-2xl transition-all cursor-pointer transform hover:-translate-y-1 active:translate-y-0"
+            className="inline-flex items-center gap-2.5 px-9 py-4 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-base shadow-md transition-all cursor-pointer"
           >
             <Play className="w-5 h-5 fill-white" />
             Mulai Ujian ({modeConfigs[examMode].count} Soal • {modeConfigs[examMode].minutes} Menit)
           </button>
-          <p className="text-xs text-slate-400 mt-2 font-medium">
+          <p className="text-xs text-stone-500 mt-2 font-medium">
             SMAN 1 Pinrang • Ujian Berjalan Mandiri
           </p>
         </div>
@@ -453,7 +473,6 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
   const isTimeCritical = timeLeftSeconds < 180;
 
   // Split paragraphs of stimulus for highlighting
-  const stimulusParas = currentQ.stimulusText.split('\n\n');
   const highlightedForThisQ = highlightedParas[currentQ.id] || [];
 
   // Check if stimulus has TEKS 1 and TEKS 2
@@ -470,25 +489,25 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
   }
 
   return (
-    <div className="space-y-4 pb-20 sm:pb-8 animate-fadeIn">
+    <div className="space-y-4 pb-24 lg:pb-8 animate-fadeIn">
       {/* Top Exam Navigation Bar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 flex-wrap">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center justify-between gap-3 flex-wrap">
         {/* Left: Progress info & mobile palette trigger */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowMobilePalette(true)}
-            className="lg:hidden p-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+            className="lg:hidden p-2 rounded-xl bg-stone-100 text-stone-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
             title="Buka Daftar Nomor"
           >
-            <Grid className="w-4 h-4 text-indigo-600" />
+            <Grid className="w-4 h-4 text-teal-600" />
             <span>#{currentIndex + 1}</span>
           </button>
 
-          <span className="hidden sm:inline font-extrabold text-slate-900 text-sm">
-            Nomor {currentIndex + 1} <span className="text-slate-400 font-normal">/ {currentQuestions.length}</span>
+          <span className="hidden sm:inline font-extrabold text-stone-900 text-sm">
+            Nomor {currentIndex + 1} <span className="text-stone-500 font-normal">/ {currentQuestions.length}</span>
           </span>
 
-          <span className="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-semibold">
+          <span className="text-xs bg-stone-100 text-stone-700 px-2.5 py-1 rounded-lg font-semibold">
             {answeredCount} Terjawab
           </span>
 
@@ -499,9 +518,9 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
             </span>
           )}
 
-          <div className="hidden lg:flex items-center gap-1.5 pl-2.5 border-l border-slate-200 text-xs font-semibold text-slate-600">
-            <span className="text-indigo-700 font-bold">{profile.name}</span>
-            <span className="text-slate-400">({profile.className})</span>
+          <div className="hidden lg:flex items-center gap-1.5 pl-2.5 border-l border-stone-200 text-xs font-semibold text-stone-600">
+            <span className="text-teal-700 font-bold">{profile.name}</span>
+            <span className="text-stone-500">({profile.className})</span>
           </div>
         </div>
 
@@ -510,7 +529,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-sm font-extrabold transition-all ${
             isTimeCritical
               ? 'bg-rose-50 text-rose-600 border border-rose-300 animate-pulse'
-              : 'bg-slate-100 text-slate-800 border border-slate-200'
+              : 'bg-stone-100 text-stone-900 border border-stone-200'
           }`}
         >
           <Timer className="w-4 h-4" />
@@ -524,9 +543,10 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               isFlagged
                 ? 'bg-amber-500 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-amber-50 hover:text-amber-800'
+                : 'bg-stone-100 text-stone-700 hover:bg-amber-50 hover:text-amber-800'
             }`}
             title="Pintasan keyboard: tekan tombol F"
+            aria-label="Tandai soal ragu-ragu"
           >
             <Flag className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{isFlagged ? 'Tersimpan Kuning' : 'Tandai Soal (F)'}</span>
@@ -546,24 +566,24 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
       {/* Main Split-Pane Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left: Reading Stimulus Pane */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs space-y-4">
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-2xs space-y-4">
           {/* Header Controls for Stimulus */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-100 flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-teal-600" />
+              <span className="text-xs font-bold text-stone-700">
                 Wacana Stimulus Soal #{currentIndex + 1}
               </span>
             </div>
 
             {/* Stimulus Reading Toolbar: Font size, Audio, Highlighter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
+            <div className="flex items-center gap-1.5 bg-stone-50 p-1 rounded-xl border border-stone-200 text-xs">
               {/* Font Size Pills */}
-              <div className="flex items-center gap-0.5 border-r border-slate-200 pr-1.5">
+              <div className="flex items-center gap-0.5 border-r border-stone-200 pr-1.5">
                 <button
                   onClick={() => setFontSize('sm')}
                   className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
-                    fontSize === 'sm' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-200'
+                    fontSize === 'sm' ? 'bg-teal-600 text-white' : 'text-stone-600 hover:bg-stone-200'
                   }`}
                   title="Ukuran Huruf Kecil"
                 >
@@ -572,7 +592,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                 <button
                   onClick={() => setFontSize('md')}
                   className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
-                    fontSize === 'md' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-200'
+                    fontSize === 'md' ? 'bg-teal-600 text-white' : 'text-stone-600 hover:bg-stone-200'
                   }`}
                   title="Ukuran Huruf Standar"
                 >
@@ -581,7 +601,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                 <button
                   onClick={() => setFontSize('lg')}
                   className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
-                    fontSize === 'lg' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-200'
+                    fontSize === 'lg' ? 'bg-teal-600 text-white' : 'text-stone-600 hover:bg-stone-200'
                   }`}
                   title="Ukuran Huruf Besar"
                 >
@@ -595,9 +615,11 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                 className={`p-1.5 rounded-lg flex items-center gap-1 text-[11px] font-semibold transition-colors ${
                   isHighlighterActive
                     ? 'bg-amber-400 text-amber-950 font-bold'
-                    : 'text-slate-600 hover:bg-slate-200'
+                    : 'text-stone-600 hover:bg-stone-200'
                 }`}
-                title="Aktifkan Mode Stabilo Kuning (Klik paragraf untuk menyorot)"
+                title="Aktifkan Mode Stabilo (Klik paragraf untuk menyorot)"
+                aria-label="Mode stabilo"
+                aria-pressed={isHighlighterActive}
               >
                 <Highlighter className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Stabilo</span>
@@ -607,9 +629,10 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
               <button
                 onClick={() => toggleSpeakText(currentQ.stimulusText)}
                 className={`p-1.5 rounded-lg flex items-center gap-1 text-[11px] font-semibold transition-colors ${
-                  isSpeaking ? 'bg-indigo-600 text-white animate-pulse' : 'text-slate-600 hover:bg-slate-200'
+                  isSpeaking ? 'bg-teal-600 text-white animate-pulse' : 'text-stone-600 hover:bg-stone-200'
                 }`}
                 title={isSpeaking ? 'Hentikan Audio' : 'Dengarkan Teks Dibacakan'}
+                aria-label={isSpeaking ? 'Hentikan audio' : 'Dengarkan teks dibacakan'}
               >
                 {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                 <span className="hidden sm:inline">{isSpeaking ? 'Stop' : 'Audio'}</span>
@@ -619,11 +642,11 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
 
           {/* Multitext Tab Switcher if applicable */}
           {hasMultitext && (
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+            <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl text-xs font-semibold">
               <button
                 onClick={() => setMultitextTab('semua')}
                 className={`flex-1 py-1 rounded-lg transition-all ${
-                  multitextTab === 'semua' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600'
+                  multitextTab === 'semua' ? 'bg-white text-teal-700 shadow-xs' : 'text-stone-600'
                 }`}
               >
                 Tampilkan Kedua Teks
@@ -631,7 +654,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
               <button
                 onClick={() => setMultitextTab('teks1')}
                 className={`flex-1 py-1 rounded-lg transition-all ${
-                  multitextTab === 'teks1' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600'
+                  multitextTab === 'teks1' ? 'bg-white text-teal-700 shadow-xs' : 'text-stone-600'
                 }`}
               >
                 Fokus Teks 1
@@ -639,7 +662,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
               <button
                 onClick={() => setMultitextTab('teks2')}
                 className={`flex-1 py-1 rounded-lg transition-all ${
-                  multitextTab === 'teks2' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600'
+                  multitextTab === 'teks2' ? 'bg-white text-teal-700 shadow-xs' : 'text-stone-600'
                 }`}
               >
                 Fokus Teks 2
@@ -649,10 +672,10 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
 
           {/* Title */}
           <div>
-            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full inline-block mb-1.5">
+            <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full inline-block mb-1.5">
               {COMPETENCY_LABELS[currentQ.competency]}
             </span>
-            <h3 className="font-extrabold text-slate-900 text-base sm:text-lg">
+            <h3 className="font-extrabold text-stone-900 text-base sm:text-lg">
               {currentQ.stimulusTitle}
             </h3>
           </div>
@@ -660,7 +683,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
           {/* Highlighter guide if active */}
           {isHighlighterActive && (
             <div className="p-2 bg-amber-50 text-amber-900 rounded-lg border border-amber-200 text-[11px] flex items-center justify-between">
-              <span>🖍️ Mode stabilo aktif: klik paragraf wacana di bawah untuk memberi tanda kuning.</span>
+              <span>Mode stabilo aktif: klik paragraf wacana di bawah untuk memberi tanda.</span>
               <button
                 onClick={() => setHighlightedParas({ ...highlightedParas, [currentQ.id]: [] })}
                 className="font-bold underline text-amber-800 cursor-pointer ml-2"
@@ -672,7 +695,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
 
           {/* Scrollable Stimulus Content with Adjustable Font Size */}
           <div
-            className={`text-slate-800 leading-relaxed max-h-[460px] overflow-y-auto pr-2 stimulus-scroll font-serif-reading space-y-3.5 ${
+            className={`text-stone-900 leading-relaxed max-h-[460px] overflow-y-auto pr-2 stimulus-scroll font-serif-reading space-y-3.5 ${
               fontSize === 'sm' ? 'text-xs' : fontSize === 'lg' ? 'text-base' : 'text-sm'
             }`}
           >
@@ -681,6 +704,19 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
               return (
                 <p
                   key={pIdx}
+                  role={isHighlighterActive ? 'button' : undefined}
+                  tabIndex={isHighlighterActive ? 0 : undefined}
+                  aria-pressed={isHighlighterActive ? isParaHighlighted : undefined}
+                  onKeyDown={
+                    isHighlighterActive
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleToggleHighlightPara(pIdx);
+                          }
+                        }
+                      : undefined
+                  }
                   onClick={() => handleToggleHighlightPara(pIdx)}
                   className={`transition-colors rounded-lg p-1.5 -mx-1.5 ${
                     isHighlighterActive ? 'cursor-pointer hover:bg-amber-100/60' : ''
@@ -693,7 +729,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
           </div>
 
           {currentQ.stimulusSource && (
-            <p className="text-[11px] text-slate-400 italic pt-2 border-t border-slate-100">
+            <p className="text-[11px] text-stone-500 italic pt-2 border-t border-stone-100">
               Sumber: {currentQ.stimulusSource}
             </p>
           )}
@@ -702,19 +738,19 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
         {/* Right: Stem, Options, and Palette */}
         <div className="lg:col-span-5 space-y-5">
           {/* Question Box */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs space-y-4">
+          <div className="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-2xs space-y-4">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+              <span className="font-bold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full">
                 {currentQ.type === 'pilihan-ganda-kompleks'
                   ? 'Pilihan Ganda Kompleks (Bisa > 1)'
                   : currentQ.type === 'benar-salah'
                   ? 'Benar / Salah'
                   : 'Pilihan Ganda'}
               </span>
-              <span className="text-slate-400 capitalize">{currentQ.difficulty}</span>
+              <span className="text-stone-500 capitalize">{currentQ.difficulty}</span>
             </div>
 
-            <h4 className="font-extrabold text-slate-900 text-sm sm:text-base leading-snug">
+            <h4 className="font-extrabold text-stone-900 text-sm sm:text-base leading-snug">
               {currentQ.question}
             </h4>
 
@@ -731,13 +767,13 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                     onClick={() => handleSelectOption(opt.id)}
                     className={`w-full text-left p-3.5 rounded-xl border text-xs sm:text-sm transition-all flex items-start gap-3 cursor-pointer ${
                       isSelected
-                        ? 'bg-indigo-50 border-indigo-600 text-indigo-900 font-semibold ring-1 ring-indigo-500 shadow-2xs'
-                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                        ? 'bg-teal-50 border-teal-600 text-teal-900 font-semibold ring-1 ring-teal-500 shadow-2xs'
+                        : 'bg-stone-50 hover:bg-stone-100 text-stone-900 border-stone-200'
                     }`}
                   >
                     <span
                       className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition-all ${
-                        isSelected ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-200 text-slate-700'
+                        isSelected ? 'bg-teal-600 text-white shadow-xs' : 'bg-stone-200 text-stone-700'
                       }`}
                     >
                       {opt.id}
@@ -749,19 +785,19 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
             </div>
 
             {/* Keyboard Shortcuts Helper */}
-            <div className="hidden sm:flex items-center justify-between text-[11px] text-slate-400 pt-1">
+<div className="hidden sm:flex items-center justify-between text-[11px] text-stone-500 pt-1">
               <span className="flex items-center gap-1">
                 <Keyboard className="w-3.5 h-3.5" /> Tekan huruf A-E di keyboard untuk memilih
               </span>
-              <span>Panah ⬅ ➡ untuk navigasi</span>
+              <span>Panah kiri/kanan untuk navigasi</span>
             </div>
 
             {/* Navigation Buttons */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2.5 flex-wrap">
+            <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2.5 flex-wrap">
               <button
                 onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
                 disabled={currentIndex === 0}
-                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 disabled:opacity-40 text-stone-700 text-xs font-bold transition-all cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Sebelumnya</span>
@@ -771,7 +807,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                 {currentIndex < currentQuestions.length - 1 && (
                   <button
                     onClick={() => setCurrentIndex((prev) => Math.min(currentQuestions.length - 1, prev + 1))}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                   >
                     <span>Berikutnya</span>
                     <ChevronRight className="w-4 h-4" />
@@ -795,12 +831,12 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
           </div>
 
           {/* Question Palette Desktop Grid */}
-          <div className="hidden lg:block bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3">
+          <div className="hidden lg:block bg-white rounded-2xl border border-stone-200 p-5 shadow-2xs space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+              <span className="text-xs font-bold text-stone-700 block">
                 Lembar Nomor Soal ({currentQuestions.length})
               </span>
-              <span className="text-[11px] text-slate-400">Klik untuk lompat</span>
+              <span className="text-[11px] text-stone-500">Klik untuk lompat</span>
             </div>
 
             <div className="grid grid-cols-5 gap-2 max-h-56 overflow-y-auto pr-1 stimulus-scroll">
@@ -810,10 +846,10 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                 const isItemFlagged = flagged.includes(q.id);
                 const isCurrent = idx === currentIndex;
 
-                let paletteColor = 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200';
+                let paletteColor = 'bg-stone-100 text-stone-600 hover:bg-stone-200 border-stone-200';
 
                 if (isCurrent) {
-                  paletteColor = 'ring-2 ring-indigo-600 font-extrabold';
+                  paletteColor = 'ring-2 ring-teal-600 font-extrabold';
                 }
 
                 if (isItemFlagged) {
@@ -835,7 +871,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
             </div>
 
             {/* Legend */}
-            <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100">
+            <div className="pt-2 flex items-center justify-between text-[11px] text-stone-500 border-t border-stone-100">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" /> Dijawab
               </span>
@@ -843,7 +879,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Ragu
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Belum
+                <span className="w-2.5 h-2.5 rounded-full bg-stone-200" /> Belum
               </span>
             </div>
           </div>
@@ -851,11 +887,11 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
       </div>
 
       {/* Sticky Bottom Bar on Mobile for effortless navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 p-2.5 shadow-md flex items-center justify-between gap-2">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-stone-200 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-md flex items-center justify-between gap-2">
         <button
           onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
           disabled={currentIndex === 0}
-          className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 disabled:opacity-40 text-xs font-bold flex items-center gap-1"
+          className="p-2.5 rounded-xl border border-stone-200 bg-white text-stone-700 disabled:opacity-40 text-xs font-bold flex items-center gap-1"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Kembali</span>
@@ -863,9 +899,9 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
 
         <button
           onClick={() => setShowMobilePalette(true)}
-          className="px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-extrabold flex items-center gap-1.5"
+          className="px-3 py-2 rounded-xl bg-stone-100 text-stone-900 text-xs font-extrabold flex items-center gap-1.5"
         >
-          <Grid className="w-4 h-4 text-indigo-600" />
+          <Grid className="w-4 h-4 text-teal-600" />
           <span>Soal {currentIndex + 1} / {currentQuestions.length}</span>
         </button>
 
@@ -880,7 +916,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
         ) : (
           <button
             onClick={() => setCurrentIndex((prev) => Math.min(currentQuestions.length - 1, prev + 1))}
-            className="p-2.5 px-3 rounded-xl bg-indigo-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer shrink-0"
+            className="p-2.5 px-3 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer shrink-0"
           >
             <span>Lanjut</span>
             <ChevronRight className="w-4 h-4" />
@@ -890,13 +926,13 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
 
       {/* Mobile Palette Drawer Modal */}
       {showMobilePalette && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
-          <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-scaleUp">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-extrabold text-slate-900 text-sm">Pilih Nomor Soal ({currentQuestions.length})</h3>
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+          <div ref={paletteTrapRef} className="bg-white rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-scaleUp">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <h3 className="font-extrabold text-stone-900 text-sm">Pilih Nomor Soal ({currentQuestions.length})</h3>
               <button
                 onClick={() => setShowMobilePalette(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700"
+                className="p-1.5 rounded-lg text-stone-500 hover:text-stone-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -909,10 +945,10 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
                 const isItemFlagged = flagged.includes(q.id);
                 const isCurrent = idx === currentIndex;
 
-                let paletteColor = 'bg-slate-100 text-slate-700 border-slate-200';
+                let paletteColor = 'bg-stone-100 text-stone-700 border-stone-200';
 
                 if (isCurrent) {
-                  paletteColor = 'ring-2 ring-indigo-600 font-extrabold';
+                  paletteColor = 'ring-2 ring-teal-600 font-extrabold';
                 }
 
                 if (isItemFlagged) {
@@ -938,7 +974,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
 
             <button
               onClick={() => setShowMobilePalette(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs"
+              className="w-full py-2.5 rounded-xl bg-stone-900 text-white font-bold text-xs"
             >
               Tutup Lembar Nomor
             </button>
@@ -948,17 +984,17 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
 
       {/* Confirmation Modal Before Submit */}
       {showConfirmFinishModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div ref={confirmTrapRef} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h3 className="text-lg font-extrabold text-slate-900">
+              <h3 className="text-lg font-extrabold text-stone-900">
                 Selesaikan Ujian & Buka Fitur Periksa Jawaban?
               </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-stone-500 leading-relaxed">
                 {unansweredCount > 0 ? (
                   <>
                     Anda masih memiliki <span className="font-bold text-rose-600">{unansweredCount} butir soal</span> yang belum dijawab. Setelah menekan tombol Selesai, lembar ujian akan dikunci, Nilai Akhir dihitung, dan <strong>Fitur Periksa Jawaban</strong> akan langsung dibuka.
@@ -972,7 +1008,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({
             <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 onClick={() => setShowConfirmFinishModal(false)}
-                className="py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
+                className="py-2.5 rounded-xl border border-stone-200 text-stone-700 font-bold text-xs hover:bg-stone-50 transition-all cursor-pointer"
               >
                 Lanjutkan Ujian
               </button>

@@ -29,15 +29,15 @@ export const TipsView: React.FC = () => {
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-3">
+      <div className="bg-white rounded-2xl border border-stone-200 p-6 sm:p-8 shadow-xs space-y-3">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
           <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
-          PANDUAN TAKTIK & STRATEGI TKA
+          Panduan Taktik & Strategi TKA
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
           Strategi Menaklukkan Asesmen Bahasa Indonesia
         </h1>
-        <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+        <p className="text-xs sm:text-sm text-stone-600 max-w-2xl leading-relaxed">
           Kiat praktis membaca stimulus panjang, mendeteksi opsi jebakan, dan mengelola waktu secara terukur agar performa ujian Anda maksimal.
         </p>
 
@@ -49,8 +49,8 @@ export const TipsView: React.FC = () => {
               onClick={() => setSelectedCategory(c)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === c
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
               }`}
             >
               {c}
@@ -64,36 +64,36 @@ export const TipsView: React.FC = () => {
         {filtered.map((tip) => (
           <div
             key={tip.id}
-            className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-5 hover:border-indigo-300 transition-all"
+            className="bg-white rounded-2xl border border-stone-200 p-6 shadow-2xs space-y-5 hover:border-teal-300 transition-all"
           >
             {/* Meta */}
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md">
+              <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md">
                 {tip.category}
               </span>
-              <span className="text-[11px] font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">
+              <span className="text-[11px] font-semibold text-stone-600 bg-stone-50 px-2.5 py-1 rounded-md">
                 {tip.badge}
               </span>
             </div>
 
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+              <h3 className="text-base sm:text-lg font-bold text-stone-900 leading-snug">
                 {tip.title}
               </h3>
-              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              <p className="text-xs text-stone-600 mt-1 leading-relaxed">
                 {tip.summary}
               </p>
             </div>
 
             {/* Steps */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+            <div className="space-y-2 pt-2 border-t border-stone-100">
+              <span className="text-xs font-bold text-stone-900 block">
                 Langkah Eksekusi:
               </span>
-              <ul className="text-xs text-slate-600 space-y-1.5">
+              <ul className="text-xs text-stone-600 space-y-1.5">
                 {tip.steps.map((st, sIdx) => (
                   <li key={sIdx} className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="w-5 h-5 rounded-full bg-teal-50 text-teal-700 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
                       {sIdx + 1}
                     </span>
                     <span className="leading-snug">{st}</span>
@@ -103,9 +103,9 @@ export const TipsView: React.FC = () => {
             </div>
 
             {/* Case Study Example */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-              <span className="font-bold text-slate-900 block">Studi Kasus Soal:</span>
-              <div className="italic text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed font-serif-reading">
+            <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2 text-xs">
+              <span className="font-bold text-stone-900 block">Studi Kasus Soal:</span>
+              <div className="italic text-stone-700 bg-white p-2.5 rounded-lg border border-stone-200 leading-relaxed font-serif-reading">
                 "{tip.exampleCase.questionContext}"
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">

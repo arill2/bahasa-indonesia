@@ -10,7 +10,7 @@
 
 ## 2. Dial Desain (Antislop Framework)
 - **ENERGY:** `2` (Tenang, akademis, minim distraksi visual; tidak ada pulsating tiada henti atau warna neon).
-- **RHYTHM:** `2` (Struktur kartu modular dengan batas tegas `border-slate-200`, hierarki judul-deskripsi yang konsisten).
+- **RHYTHM:** `2` (Struktur kartu modular dengan batas tegas `border-stone-200`, hierarki judul-deskripsi yang konsisten).
 - **MOTION:** `1` (Animasi mikro seperlunya; transisi hover halus, `animate-fadeIn` saat perpindahan tab, tanpa efek gerak yang mengganggu pembacaan wacana).
 
 ---
@@ -20,14 +20,14 @@
 ### Palet Primer & Sekunder
 | Peran | Token Tailwind | Hex Approx | Alasan & Penggunaan |
 |---|---|---|---|
-| **Primary Brand** | `indigo-600` / `indigo-700` | `#4f46e5` / `#4338ca` | Warna dasar institusional solid; mencerminkan kedalaman pemikiran, fokus studi, dan martabat akademik sekolah. Digunakan pada tombol aksi utama, header identitas, tab aktif. |
-| **Dark Neutral Hero** | `slate-900` / `slate-800` | `#0f172a` / `#1e293b` | Warna kontras tinggi untuk hero banner dan kartu nilai utama. Solid tanpa gradien ungu/sian atau bola blur dekoratif. |
-| **Neutral Surface** | `white` / `slate-50` / `slate-100` | `#ffffff` / `#f8fafc` / `#f1f5f9` | Latar belakang bersih untuk kenyamanan membaca stimulus wacana berparagraf banyak. |
-| **Neutral Border** | `slate-200` / `slate-300` | `#e2e8f0` / `#cbd5e1` | Garis batas kartu yang tegas dan rapi, menggantikan bayangan kabur. |
-| **Neutral Text** | `slate-900` / `slate-700` / `slate-500` | `#0f172a` / `#334155` / `#64748b` | Kontras tinggi teks tajam sesuai standar aksesibilitas WCAG AAA untuk teks panjang. |
+| **Primary Brand** | `teal-700` / `teal-800` | `#0f766e` / `#115e59` | Warna dasar institusional solid dan agak gelap untuk suasana akademik yang tenang; mencerminkan ketenangan, fokus studi, dan martabat sekolah. Digunakan pada tombol aksi utama, header identitas, tab aktif. |
+| **Dark Neutral Hero** | `stone-900` / `stone-800` | `#1c1917` / `#292524` | Warna gelap hangat berkontras tinggi untuk hero banner dan kartu nilai utama. Solid tanpa gradien ungu/sian atau bola blur dekoratif. |
+| **Neutral Surface** | `white` / `stone-50` / `stone-100` | `#ffffff` / `#fafaf9` / `#f5f5f4` | Latar hangat yang nyaman untuk membaca stimulus wacana berparagraf banyak. |
+| **Neutral Border** | `stone-200` / `stone-300` | `#e7e5e4` / `#d6d3d1` | Garis batas kartu yang tegas dan rapi, menggantikan bayangan kabur. |
+| **Neutral Text** | `stone-900` / `stone-700` / `stone-500` | `#1c1917` / `#44403c` / `#78716c` | Kontras tinggi teks tajam sesuai standar aksesibilitas WCAG untuk teks panjang. |
 
 > [!NOTE]
-> **Larangan Gradien AI & Bola Blur (R-01 & R-13):** Seluruh elemen antarmuka menggunakan warna solid (*flat craft*). Dilarang menggunakan gradien 3-stop acak (`from-indigo-950 via-indigo-900 to-sky-950`), gradien tombol mikro (`from-indigo-600 to-indigo-700`), kartu warna pelangi pastel (`from-sky-50 via-indigo-50 to-purple-50`), serta bola blur radial (`blur-3xl`/`blur-2xl`) di latar belakang hero.
+> **Larangan Gradien AI & Bola Blur (R-01 & R-13):** Seluruh elemen antarmuka menggunakan warna solid (*flat craft*). Dilarang menggunakan gradien acak (mis. `from-teal-950 via-teal-900 to-cyan-950`), gradien tombol mikro, kartu warna pelangi pastel, serta bola blur radial (`blur-3xl`/`blur-2xl`) di latar belakang hero.
 
 ### Palet Semantik (Evaluasi & Status)
 | Status | Token Tailwind | Penggunaan |
