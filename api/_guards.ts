@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { isAdminToken } from './_core';
+import { isAdminToken } from './_core.js';
 
 export function guardAdmin(req: VercelRequest, res: VercelResponse): boolean {
   if (!isAdminToken(req.headers['x-admin-token'] as string | undefined)) {

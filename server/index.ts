@@ -10,9 +10,9 @@ import {
   listActivity,
   deleteStudent,
   isAdminToken
-} from '../api/_core';
-import { isInvalidInput } from '../api/_guards';
-import { RATE_LIMITS, checkRateLimit } from '../api/_rateLimit';
+} from '../api/_core.js';
+import { isInvalidInput } from '../api/_guards.js';
+import { RATE_LIMITS, checkRateLimit } from '../api/_rateLimit.js';
 
 async function limit(req: Request, res: Response, rule: typeof RATE_LIMITS.results): Promise<boolean> {
   const ok = await checkRateLimit(req, rule);

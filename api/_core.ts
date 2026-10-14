@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { getSupabase } from './_supabase';
+import { getSupabase } from './_supabase.js';
 
 export interface ResultPayload {
   name: string;

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { adminLogin } from './_core';
-import { RATE_LIMITS, checkRateLimit } from './_rateLimit';
+import { adminLogin } from './_core.js';
+import { RATE_LIMITS, checkRateLimit } from './_rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

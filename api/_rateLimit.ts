@@ -1,4 +1,4 @@
-import { getSupabase } from './_supabase';
+import { getSupabase } from './_supabase.js';
 
 export interface RateLimitRule {
   name: string;

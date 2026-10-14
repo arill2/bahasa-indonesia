@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { studentLogin } from './_core';
-import { readBody, isInvalidInput } from './_guards';
-import { RATE_LIMITS, checkRateLimit } from './_rateLimit';
+import { studentLogin } from './_core.js';
+import { readBody, isInvalidInput } from './_guards.js';
+import { RATE_LIMITS, checkRateLimit } from './_rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

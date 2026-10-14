@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { listActivity } from './_core';
-import { guardAdmin } from './_guards';
-import { RATE_LIMITS, checkRateLimit } from './_rateLimit';
+import { listActivity } from './_core.js';
+import { guardAdmin } from './_guards.js';
+import { RATE_LIMITS, checkRateLimit } from './_rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
