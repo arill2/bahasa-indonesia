@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# Dev by Syahrir Hamdani XII.G

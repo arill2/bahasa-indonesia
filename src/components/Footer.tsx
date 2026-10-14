@@ -51,10 +51,13 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500">
+        <div className="mt-8 pt-6 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 gap-2">
           <p>© 2026 SMAN 1 Pinrang. Hak Cipta Dilindungi Undang-Undang.</p>
-          <p className="mt-2 sm:mt-0 font-medium text-stone-600">
+          <p className="font-medium text-stone-600">
             Guru Pembimbing: Muhammad Ali Rahman, S.Pd., M.Pd.
+          </p>
+          <p className="text-stone-500">
+            Dev by <span className="font-semibold text-teal-700">Syahrir Hamdani XII.G</span>
           </p>
         </div>
       </div>
